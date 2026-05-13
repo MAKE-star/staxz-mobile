@@ -4,9 +4,15 @@
     "slug": "staxz",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
     "scheme": "staxz",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FAF8F5"
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.staxz.app",
@@ -19,6 +25,7 @@
     "android": {
       "package": "com.staxz.app",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#7B4FA6"
       },
       "permissions": [
@@ -32,22 +39,11 @@
       "expo-secure-store",
       [
         "expo-notifications",
-        {
-          "color": "#7B4FA6"
-        }
+        { "color": "#7B4FA6" }
       ]
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "extra": {
-      "router": {
-        "origin": false
-      },
-      "eas": {
-        "projectId": "9e07bfc3-af81-424c-85d4-e7b5b3d844b1"
-      }
-    },
-    "owner": "make_d_great"
+    }
   }
 }
