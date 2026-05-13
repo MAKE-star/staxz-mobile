@@ -1,10 +1,12 @@
 export { Button } from './Button';
 export { Input } from './Input';
-export { Card } from './Card';
-export { Badge } from './Badge';
-export { Avatar } from './Avatar';
-export { StarRating } from './StarRating';
-export { ScreenHeader } from './ScreenHeader';
-export { EmptyState } from './EmptyState';
-export { LoadingSpinner } from './LoadingSpinner';
-export { BottomSheet } from './BottomSheet';
+export {
+  Card,
+  Badge,
+  Avatar,
+  StarRating,
+  ScreenHeader,
+  EmptyState,
+  LoadingSpinner,
+  BottomSheet,
+} from './Card';
