@@ -7,7 +7,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { bookingsApi } from '../../../src/api/bookings.api';
 import { providersApi } from '../../../src/api/providers.api';
-import { providersApi } from '../../../src/api/providers.api';
 import { getErrorMessage } from '../../../src/api/client';
 import { COLORS, SPACING, RADIUS } from '../../../src/constants';
 import { ScreenHeader, Badge, Button, LoadingSpinner, EmptyState, BottomSheet } from '../../../src/components/ui';
@@ -198,7 +197,7 @@ export default function BookingDetailScreen() {
                   { text: 'Cancel', style: 'destructive', onPress: () => cancel.mutate() },
                 ]
               )}
-              style={[styles.actionBtn, { borderColor: COLORS.red }]}
+              style={[styles.actionBtn, { borderColor: COLORS.red }] as any}
               textStyle={{ color: COLORS.red }}
             />
           )}
@@ -288,7 +287,6 @@ const styles = StyleSheet.create({
   },
   statusEmoji: { fontSize: 40, marginBottom: SPACING.sm },
   statusBadge: { marginBottom: SPACING.sm },
-  providerName:{ fontSize: 18, fontWeight: '700', color: COLORS.text0, marginBottom: SPACING.xs },
   amount:      { fontSize: 28, fontWeight: '800', color: COLORS.primary },
   card: {
     backgroundColor: COLORS.bg1, borderRadius: RADIUS.lg,
