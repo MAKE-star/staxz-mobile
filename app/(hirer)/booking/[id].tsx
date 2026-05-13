@@ -7,7 +7,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { bookingsApi } from '../../../src/api/bookings.api';
 import { providersApi } from '../../../src/api/providers.api';
-import { providersApi } from '../../../src/api/providers.api';
 import { getErrorMessage } from '../../../src/api/client';
 import { COLORS, SPACING, RADIUS } from '../../../src/constants';
 import { ScreenHeader, Badge, Button, LoadingSpinner, EmptyState, BottomSheet } from '../../../src/components/ui';
