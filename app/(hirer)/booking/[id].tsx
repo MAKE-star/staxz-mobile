@@ -7,6 +7,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { bookingsApi } from '../../../src/api/bookings.api';
 import { providersApi } from '../../../src/api/providers.api';
+import { providersApi } from '../../../src/api/providers.api';
 import { getErrorMessage } from '../../../src/api/client';
 import { COLORS, SPACING, RADIUS } from '../../../src/constants';
 import { ScreenHeader, Badge, Button, LoadingSpinner, EmptyState, BottomSheet } from '../../../src/components/ui';
@@ -41,15 +42,6 @@ export default function BookingDetailScreen() {
   const [reviewBody, setReviewBody]   = useState('');
   const [disputeReason, setDisputeReason] = useState('');
   const [disputeDetails, setDisputeDetails] = useState('');
-
-  const { data: provider } = useQuery({
-    queryKey: ['booking-provider', id],
-    queryFn: async () => {
-      if (!booking) return null;
-      return providersApi.getById(booking.provider_id).then(r => r.data.data);
-    },
-    enabled: !!booking,
-  });
 
   const { data: booking, isLoading } = useQuery({
     queryKey: ['booking', id],
