@@ -1,153 +1,87 @@
 import { useState, useRef, useEffect } from 'react';
-import {
-  View, Text, StyleSheet, TextInput,
-  TouchableOpacity, KeyboardAvoidingView, Platform,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Button } from '../../src/components/ui/Button';
-import { authApi } from '../../src/api/auth.api';
-import { useAuthStore } from '../../src/store/auth.store';
-import { getErrorMessage } from '../../src/api/client';
-import { COLORS, SPACING, RADIUS } from '../../src/constants';
+import { api } from '../../src/api';
+import { useAuth } from '../../src/store/auth';
+import { C } from '../../src/constants';
 
 export default function OtpScreen() {
-  const router  = useRouter();
+  const router = useRouter();
   const { phone } = useLocalSearchParams<{ phone: string }>();
-  const { setTokens } = useAuthStore();
-
-  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const { setAuth } = useAuth();
+  const [code, setCode] = useState(['','','','','','']);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [resendTimer, setResendTimer] = useState(60);
-  const inputs = useRef<TextInput[]>([]);
+  const [timer, setTimer] = useState(60);
+  const refs = useRef<(TextInput | null)[]>([]);
 
   useEffect(() => {
-    const timer = setInterval(() => setResendTimer(t => Math.max(0, t - 1)), 1000);
-    return () => clearInterval(timer);
+    const t = setInterval(() => setTimer(s => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(t);
   }, []);
 
-  const handleChange = (val: string, idx: number) => {
+  const onChange = (val: string, i: number) => {
     if (!/^\d*$/.test(val)) return;
-    const next = [...code];
-    next[idx] = val.slice(-1);
-    setCode(next);
-    if (val && idx < 5) inputs.current[idx + 1]?.focus();
-    if (next.every(d => d !== '')) handleVerify(next.join(''));
+    const next = [...code]; next[i] = val.slice(-1); setCode(next);
+    if (val && i < 5) refs.current[i + 1]?.focus();
+    if (next.every(d => d)) verify(next.join(''));
   };
 
-  const handleKeyPress = (key: string, idx: number) => {
-    if (key === 'Backspace' && !code[idx] && idx > 0) {
-      inputs.current[idx - 1]?.focus();
-    }
-  };
-
-  const handleVerify = async (fullCode: string) => {
-    setError('');
+  const verify = async (fullCode: string) => {
     setLoading(true);
     try {
-      const res = await authApi.verifyOtp(phone, fullCode);
-      const { accessToken, refreshToken, isNewUser } = res.data.data;
-      await setTokens(accessToken, refreshToken);
-
-      if (isNewUser) {
-        router.replace('/(auth)/role');
-      } else {
-        const me = await authApi.me();
-        const user = me.data.data;
-        if      (user.role === 'admin')    router.replace('/(admin)/(tabs)');
-        else if (user.role === 'provider') router.replace('/(provider)/(tabs)');
-        else                               router.replace('/(hirer)/(tabs)');
+      const res = await api('/auth/verify-otp', { method: 'POST', body: { phone, code: fullCode } });
+      await setAuth(res.data.accessToken, null);
+      if (res.data.isNewUser) router.replace('/(auth)/role');
+      else {
+        const me = await api('/auth/me', { token: res.data.accessToken });
+        await setAuth(res.data.accessToken, me.data);
+        const role = me.data.role;
+        if (role === 'admin') router.replace('/(admin)/(tabs)');
+        else if (role === 'provider') router.replace('/(provider)/(tabs)');
+        else router.replace('/(hirer)/(tabs)');
       }
-    } catch (err) {
-      setError(getErrorMessage(err));
-      setCode(['', '', '', '', '', '']);
-      inputs.current[0]?.focus();
-    } finally {
-      setLoading(false);
-    }
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+      setCode(['','','','','','']);
+      refs.current[0]?.focus();
+    } finally { setLoading(false); }
   };
 
-  const handleResend = async () => {
-    if (resendTimer > 0) return;
-    try {
-      await authApi.requestOtp(phone);
-      setResendTimer(60);
-      setError('');
-    } catch (err) {
-      setError(getErrorMessage(err));
-    }
+  const resend = async () => {
+    if (timer > 0) return;
+    await api('/auth/request-otp', { method: 'POST', body: { phone } });
+    setTimer(60);
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={styles.container}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-          <Text style={styles.backText}>←  Back</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.title}>Enter OTP</Text>
-        <Text style={styles.subtitle}>
-          We sent a 6-digit code to{'\n'}<Text style={styles.phone}>{phone}</Text>
-        </Text>
-
-        <View style={styles.codeRow}>
-          {code.map((digit, i) => (
-            <TextInput
-              key={i}
-              ref={el => { if (el) inputs.current[i] = el; }}
-              style={[styles.box, digit && styles.boxFilled, error && styles.boxError]}
-              value={digit}
-              onChangeText={v => handleChange(v, i)}
-              onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, i)}
-              keyboardType="number-pad"
-              maxLength={1}
-              selectTextOnFocus
-            />
-          ))}
-        </View>
-
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        <Button
-          title={loading ? 'Verifying...' : 'Verify'}
-          onPress={() => handleVerify(code.join(''))}
-          loading={loading}
-          disabled={code.some(d => !d)}
-          style={styles.btn}
-        />
-
-        <TouchableOpacity onPress={handleResend} disabled={resendTimer > 0}>
-          <Text style={[styles.resend, resendTimer > 0 && styles.resendDisabled]}>
-            {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
-          </Text>
-        </TouchableOpacity>
+    <View style={{ flex: 1, backgroundColor: C.bg, padding: 24, paddingTop: 60 }}>
+      <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 32 }}>
+        <Text style={{ fontSize: 16, color: C.primary, fontWeight: '500' }}>← Back</Text>
+      </TouchableOpacity>
+      <Text style={{ fontSize: 26, fontWeight: '800', color: C.text, marginBottom: 8 }}>Enter OTP</Text>
+      <Text style={{ fontSize: 15, color: C.text2, marginBottom: 32 }}>
+        Code sent to <Text style={{ fontWeight: '700', color: C.text }}>{phone}</Text>
+      </Text>
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24 }}>
+        {code.map((d, i) => (
+          <TextInput key={i}
+            ref={el => { refs.current[i] = el; }}
+            value={d} onChangeText={v => onChange(v, i)}
+            onKeyPress={({ nativeEvent: { key } }) => { if (key === 'Backspace' && !d && i > 0) refs.current[i-1]?.focus(); }}
+            keyboardType="number-pad" maxLength={1} selectTextOnFocus
+            style={{ flex: 1, height: 56, borderRadius: 12, borderWidth: 1.5, borderColor: d ? C.primary : C.border, backgroundColor: d ? C.bg2 : C.white, fontSize: 22, fontWeight: '700', color: C.text, textAlign: 'center' }}
+          />
+        ))}
       </View>
-    </KeyboardAvoidingView>
+      <TouchableOpacity onPress={() => verify(code.join(''))} disabled={loading || code.some(d => !d)}
+        style={{ backgroundColor: (loading || code.some(d => !d)) ? '#C084E8' : C.primary, borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 16 }}>
+        <Text style={{ color: C.white, fontWeight: '700', fontSize: 16 }}>{loading ? 'Verifying...' : 'Verify'}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={resend} disabled={timer > 0}>
+        <Text style={{ textAlign: 'center', color: timer > 0 ? C.text3 : C.primary, fontWeight: '600' }}>
+          {timer > 0 ? `Resend in ${timer}s` : 'Resend OTP'}
+        </Text>
+      </TouchableOpacity>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: COLORS.bg0 },
-  container: { flex: 1, padding: SPACING.lg, paddingTop: 60 },
-  back:     { marginBottom: SPACING.xl },
-  backText: { fontSize: 16, color: COLORS.primary, fontWeight: '500' },
-  title:    { fontSize: 26, fontWeight: '800', color: COLORS.text0, marginBottom: SPACING.sm },
-  subtitle: { fontSize: 15, color: COLORS.text1, lineHeight: 22, marginBottom: SPACING.xl },
-  phone:    { fontWeight: '700', color: COLORS.text0 },
-  codeRow:  { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg },
-  box: {
-    flex: 1, height: 56, borderRadius: RADIUS.md, borderWidth: 1.5,
-    borderColor: COLORS.border, backgroundColor: COLORS.bg1,
-    fontSize: 22, fontWeight: '700', color: COLORS.text0,
-    textAlign: 'center',
-  },
-  boxFilled: { borderColor: COLORS.primary, backgroundColor: COLORS.bg2 },
-  boxError:  { borderColor: COLORS.red },
-  error:    { color: COLORS.red, fontSize: 13, marginBottom: SPACING.md, textAlign: 'center' },
-  btn:      { marginBottom: SPACING.lg },
-  resend:   { fontSize: 14, color: COLORS.primary, textAlign: 'center', fontWeight: '600' },
-  resendDisabled: { color: COLORS.text2 },
-});

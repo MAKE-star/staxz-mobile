@@ -1,115 +1,58 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { bookingsApi } from '../../../src/api/bookings.api';
-import { Booking, BookingStatus } from '../../../src/types';
-import { COLORS, SPACING, RADIUS } from '../../../src/constants';
-import { Badge, LoadingSpinner, EmptyState } from '../../../src/components/ui';
+import { useAuth } from '../../../src/store/auth';
+import { api } from '../../../src/api';
+import { C } from '../../../src/constants';
 
-const STATUS_CONFIG: Record<BookingStatus, { label: string; variant: 'success' | 'warning' | 'danger' | 'info' | 'default' }> = {
-  pending_payment: { label: 'Awaiting Payment', variant: 'warning' },
-  confirmed:       { label: 'Confirmed',         variant: 'info'    },
-  in_progress:     { label: 'In Progress',        variant: 'info'    },
-  completed:       { label: 'Completed',          variant: 'success' },
-  disputed:        { label: 'Disputed',           variant: 'danger'  },
-  cancelled:       { label: 'Cancelled',          variant: 'default' },
-  refunded:        { label: 'Refunded',           variant: 'default' },
+const STATUS: Record<string, { label: string; color: string }> = {
+  pending_payment: { label: 'Awaiting Payment', color: C.amber },
+  confirmed:       { label: 'Confirmed',         color: C.primary },
+  in_progress:     { label: 'In Progress',        color: C.primary },
+  completed:       { label: 'Completed',          color: C.green },
+  disputed:        { label: 'Disputed',           color: C.red },
+  cancelled:       { label: 'Cancelled',          color: C.text3 },
+  refunded:        { label: 'Refunded',           color: C.text3 },
 };
 
-const TABS = ['All', 'Active', 'Completed', 'Cancelled'];
-
 export default function BookingsScreen() {
-  const router  = useRouter();
-  const [tab, setTab] = useState('All');
-
+  const router = useRouter();
+  const { token } = useAuth();
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['bookings'],
-    queryFn: () => bookingsApi.list().then(r => r.data.data),
+    queryFn: () => api('/bookings', { token }),
   });
 
-  const filtered = (data ?? []).filter(b => {
-    if (tab === 'Active')    return ['confirmed', 'in_progress', 'pending_payment'].includes(b.status);
-    if (tab === 'Completed') return b.status === 'completed';
-    if (tab === 'Cancelled') return ['cancelled', 'refunded'].includes(b.status);
-    return true;
-  });
+  const bookings = data?.data ?? [];
+
+  if (isLoading) return <View style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color={C.primary} /></View>;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>My Bookings</Text>
-
-      {/* Tabs */}
-      <View style={styles.tabs}>
-        {TABS.map(t => (
-          <TouchableOpacity key={t} onPress={() => setTab(t)}
-            style={[styles.tabBtn, tab === t && styles.tabBtnActive]}>
-            <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>{t}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {isLoading ? <LoadingSpinner /> : (
-        <FlatList
-          data={filtered}
-          keyExtractor={b => b.id}
-          contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
-          ListEmptyComponent={<EmptyState emoji="📋" title="No bookings yet" body="Your bookings will appear here" />}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => router.push(`/(hirer)/booking/${item.id}`)}
-              activeOpacity={0.9}
-            >
-              <View style={styles.cardTop}>
-                <View>
-                  <Text style={styles.ref}>{item.reference}</Text>
-                  <Text style={styles.provider}>{item.provider_name ?? 'Provider'}</Text>
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <Text style={{ fontSize: 24, fontWeight: '800', color: C.text, padding: 16, paddingTop: 56 }}>My Bookings</Text>
+      <FlatList data={bookings} keyExtractor={(b: any) => b.id}
+        contentContainerStyle={{ padding: 16 }}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={C.primary} />}
+        ListEmptyComponent={<View style={{ alignItems: 'center', marginTop: 60 }}><Text style={{ fontSize: 40, marginBottom: 12 }}>📋</Text><Text style={{ fontSize: 18, fontWeight: '700', color: C.text }}>No bookings yet</Text></View>}
+        renderItem={({ item: b }: any) => {
+          const s = STATUS[b.status] ?? { label: b.status, color: C.text3 };
+          return (
+            <TouchableOpacity onPress={() => router.push(`/(hirer)/booking/${b.id}`)}
+              style={{ backgroundColor: C.white, borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: C.border }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                <Text style={{ fontSize: 13, color: C.text3, fontWeight: '600' }}>{b.reference}</Text>
+                <View style={{ backgroundColor: s.color + '20', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: s.color }}>{s.label}</Text>
                 </View>
-                <Badge
-                  label={STATUS_CONFIG[item.status]?.label ?? item.status}
-                  variant={STATUS_CONFIG[item.status]?.variant ?? 'default'}
-                />
               </View>
-              <View style={styles.cardBottom}>
-                <Text style={styles.amount}>₦{(item.total_charged_kobo / 100).toLocaleString()}</Text>
-                <Text style={styles.date}>
-                  {item.scheduled_at
-                    ? new Date(item.scheduled_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })
-                    : new Date(item.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })
-                  }
-                </Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 4 }}>{b.provider_name ?? 'Provider'}</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: C.primary }}>₦{(b.total_charged_kobo/100).toLocaleString()}</Text>
+                <Text style={{ fontSize: 12, color: C.text3 }}>{new Date(b.created_at).toLocaleDateString('en-NG')}</Text>
               </View>
             </TouchableOpacity>
-          )}
-        />
-      )}
+          );
+        }} />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg0 },
-  title: { fontSize: 24, fontWeight: '800', color: COLORS.text0, padding: SPACING.lg, paddingTop: 56 },
-  tabs: { flexDirection: 'row', paddingHorizontal: SPACING.md, gap: SPACING.xs, marginBottom: SPACING.md },
-  tabBtn: {
-    flex: 1, paddingVertical: SPACING.xs, borderRadius: RADIUS.full,
-    alignItems: 'center', backgroundColor: COLORS.bg2,
-  },
-  tabBtnActive: { backgroundColor: COLORS.primary },
-  tabText:      { fontSize: 12, color: COLORS.text1, fontWeight: '500' },
-  tabTextActive: { color: COLORS.white, fontWeight: '700' },
-  list: { padding: SPACING.md },
-  card: {
-    backgroundColor: COLORS.bg1, borderRadius: RADIUS.lg,
-    padding: SPACING.md, marginBottom: SPACING.md,
-    borderWidth: 1, borderColor: COLORS.border,
-  },
-  cardTop:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: SPACING.sm },
-  ref:        { fontSize: 13, color: COLORS.text2, fontWeight: '600', marginBottom: 2 },
-  provider:   { fontSize: 15, fontWeight: '700', color: COLORS.text0 },
-  cardBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  amount: { fontSize: 16, fontWeight: '800', color: COLORS.primary },
-  date:   { fontSize: 12, color: COLORS.text2 },
-});

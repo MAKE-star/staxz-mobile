@@ -4,46 +4,38 @@
     "slug": "staxz",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
     "scheme": "staxz",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "owner": "make_d_great",
+    "icon": "./assets/images/icon.png",
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#FAF8F5"
     },
-    "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "com.staxz.app",
-      "infoPlist": {
-        "NSCameraUsageDescription": "Used to upload portfolio photos",
-        "NSPhotoLibraryUsageDescription": "Used to select portfolio photos",
-        "NSLocationWhenInUseUsageDescription": "Used to find providers near you"
-      }
-    },
     "android": {
       "package": "com.staxz.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#7B4FA6"
-      },
-      "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "ACCESS_FINE_LOCATION"
-      ]
+        "backgroundColor": "#7B4FA6",
+        "foregroundImage": "./assets/images/adaptive-icon.png"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.staxz.app",
+      "supportsTablet": false
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store",
-      [
-        "expo-notifications",
-        { "color": "#7B4FA6" }
-      ]
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9e07bfc3-af81-424c-85d4-e7b5b3d844b1"
+      }
     }
   }
 }

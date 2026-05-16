@@ -1,99 +1,37 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { COLORS, SPACING, RADIUS } from '../../src/constants';
-
-const ROLES = [
-  {
-    id: 'hirer',
-    emoji: '🌟',
-    title: 'I\'m a Client',
-    description: 'Book beauty & grooming services near you',
-  },
-  {
-    id: 'provider',
-    emoji: '💼',
-    title: 'I\'m a Provider',
-    description: 'Offer your beauty & grooming services',
-  },
-];
+import { C } from '../../src/constants';
 
 export default function RoleScreen() {
   const router = useRouter();
-  const [selected, setSelected] = useState<string | null>(null);
-
-  const handleContinue = () => {
-    if (!selected) return;
-    if (selected === 'provider') router.replace('/(provider)/onboarding/step1');
-    else                         router.replace('/(hirer)/(tabs)');
-  };
+  const [role, setRole] = useState<string | null>(null);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>How will you use Staxz?</Text>
-      <Text style={styles.subtitle}>You can change this later in settings.</Text>
-
-      {ROLES.map(role => (
-        <TouchableOpacity
-          key={role.id}
-          onPress={() => setSelected(role.id)}
-          activeOpacity={0.85}
-          style={[styles.card, selected === role.id && styles.cardSelected]}
-        >
-          <Text style={styles.emoji}>{role.emoji}</Text>
-          <View style={styles.cardText}>
-            <Text style={[styles.roleTitle, selected === role.id && styles.roleTitleSelected]}>
-              {role.title}
-            </Text>
-            <Text style={styles.roleDesc}>{role.description}</Text>
+    <View style={{ flex: 1, backgroundColor: C.bg, padding: 24, paddingTop: 80 }}>
+      <Text style={{ fontSize: 26, fontWeight: '800', color: C.text, marginBottom: 8 }}>How will you use Staxz?</Text>
+      <Text style={{ fontSize: 15, color: C.text2, marginBottom: 32 }}>You can change this later.</Text>
+      {[
+        { id: 'hirer', emoji: '🌟', title: "I'm a Client", desc: 'Book beauty & grooming services' },
+        { id: 'provider', emoji: '💼', title: "I'm a Provider", desc: 'Offer your beauty & grooming services' },
+      ].map(r => (
+        <TouchableOpacity key={r.id} onPress={() => setRole(r.id)}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: C.white, borderRadius: 16, borderWidth: 1.5, borderColor: role === r.id ? C.primary : C.border, padding: 16, marginBottom: 12, backgroundColor: role === r.id ? C.bg2 : C.white }}>
+          <Text style={{ fontSize: 32 }}>{r.emoji}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: role === r.id ? C.primary : C.text }}>{r.title}</Text>
+            <Text style={{ fontSize: 13, color: C.text2 }}>{r.desc}</Text>
           </View>
-          <View style={[styles.radio, selected === role.id && styles.radioSelected]}>
-            {selected === role.id && <View style={styles.radioDot} />}
+          <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: role === r.id ? C.primary : C.border, alignItems: 'center', justifyContent: 'center' }}>
+            {role === r.id && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.primary }} />}
           </View>
         </TouchableOpacity>
       ))}
-
-      <TouchableOpacity
-        onPress={handleContinue}
-        disabled={!selected}
-        style={[styles.btn, !selected && styles.btnDisabled]}
-      >
-        <Text style={styles.btnText}>Continue →</Text>
+      <TouchableOpacity onPress={() => { if (role === 'provider') router.replace('/(provider)/onboarding/step1'); else router.replace('/(hirer)/(tabs)'); }}
+        disabled={!role}
+        style={{ backgroundColor: role ? C.primary : '#C084E8', borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 16 }}>
+        <Text style={{ color: C.white, fontWeight: '700', fontSize: 16 }}>Continue →</Text>
       </TouchableOpacity>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1, backgroundColor: COLORS.bg0,
-    padding: SPACING.lg, paddingTop: 80,
-  },
-  title:    { fontSize: 26, fontWeight: '800', color: COLORS.text0, marginBottom: SPACING.sm },
-  subtitle: { fontSize: 15, color: COLORS.text1, marginBottom: SPACING.xl },
-  card: {
-    flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
-    backgroundColor: COLORS.bg1, borderRadius: RADIUS.lg,
-    padding: SPACING.lg, marginBottom: SPACING.md,
-    borderWidth: 1.5, borderColor: COLORS.border,
-  },
-  cardSelected: { borderColor: COLORS.primary, backgroundColor: COLORS.bg2 },
-  emoji:    { fontSize: 32 },
-  cardText: { flex: 1 },
-  roleTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text0, marginBottom: 2 },
-  roleTitleSelected: { color: COLORS.primary },
-  roleDesc:  { fontSize: 13, color: COLORS.text1 },
-  radio: {
-    width: 22, height: 22, borderRadius: 11,
-    borderWidth: 2, borderColor: COLORS.border,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  radioSelected: { borderColor: COLORS.primary },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.primary },
-  btn: {
-    marginTop: SPACING.xl, backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md, padding: 16, alignItems: 'center',
-  },
-  btnDisabled: { opacity: 0.4 },
-  btnText: { color: COLORS.white, fontWeight: '700', fontSize: 16 },
-});
