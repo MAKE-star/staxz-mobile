@@ -7,7 +7,7 @@ import { C } from '../../src/constants';
 
 export default function OtpScreen() {
   const router = useRouter();
-  const { phone } = useLocalSearchParams<{ phone: string }>();
+  const { phone, mode, role } = useLocalSearchParams<{ phone: string; mode: string; role: string }>();
   const { setAuth } = useAuth();
   const [code, setCode] = useState(['','','','','','']);
   const [loading, setLoading] = useState(false);
@@ -31,17 +31,24 @@ export default function OtpScreen() {
     try {
       const res = await api('/auth/verify-otp', { method: 'POST', body: { phone, code: fullCode } });
       await setAuth(res.data.accessToken, null);
-      if (res.data.isNewUser) router.replace('/(auth)/role');
-      else {
+
+      const isNew = res.data.isNewUser;
+
+      if (isNew) {
+        // New user — route based on selected role
+        if (role === 'provider') router.replace('/(provider)/onboarding/step1');
+        else router.replace('/(hirer)/(tabs)');
+      } else {
+        // Existing user — fetch role from API
         const me = await api('/auth/me', { token: res.data.accessToken });
         await setAuth(res.data.accessToken, me.data);
-        const role = me.data.role;
-        if (role === 'admin') router.replace('/(admin)/(tabs)');
-        else if (role === 'provider') router.replace('/(provider)/(tabs)');
-        else router.replace('/(hirer)/(tabs)');
+        const userRole = me.data.role;
+        if      (userRole === 'admin')    router.replace('/(admin)/(tabs)');
+        else if (userRole === 'provider') router.replace('/(provider)/(tabs)');
+        else                              router.replace('/(hirer)/(tabs)');
       }
     } catch (e: any) {
-      Alert.alert('Error', e.message);
+      Alert.alert('Invalid code', e.message ?? 'Please try again');
       setCode(['','','','','','']);
       refs.current[0]?.focus();
     } finally { setLoading(false); }
@@ -49,37 +56,65 @@ export default function OtpScreen() {
 
   const resend = async () => {
     if (timer > 0) return;
-    await api('/auth/request-otp', { method: 'POST', body: { phone } });
-    setTimer(60);
+    try {
+      await api('/auth/request-otp', { method: 'POST', body: { phone } });
+      setTimer(60);
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    }
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg, padding: 24, paddingTop: 60 }}>
+    <View style={{ flex: 1, backgroundColor: C.bg0, padding: 24, paddingTop: 60 }}>
       <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 32 }}>
-        <Text style={{ fontSize: 16, color: C.primary, fontWeight: '500' }}>← Back</Text>
+        <Text style={{ fontSize: 22, color: C.text0 }}>←</Text>
       </TouchableOpacity>
-      <Text style={{ fontSize: 26, fontWeight: '800', color: C.text, marginBottom: 8 }}>Enter OTP</Text>
-      <Text style={{ fontSize: 15, color: C.text2, marginBottom: 32 }}>
-        Code sent to <Text style={{ fontWeight: '700', color: C.text }}>{phone}</Text>
+
+      <Text style={{ fontSize: 26, fontWeight: '800', color: C.text0, marginBottom: 6 }}>Enter OTP</Text>
+      <Text style={{ fontSize: 15, color: C.text1, marginBottom: 8, lineHeight: 22 }}>
+        We sent a 6-digit code to
       </Text>
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24 }}>
+      <Text style={{ fontSize: 16, fontWeight: '700', color: C.primary, marginBottom: 32 }}>{phone}</Text>
+
+      {/* OTP boxes */}
+      <View style={{ flexDirection: 'row', gap: 10, marginBottom: 32 }}>
         {code.map((d, i) => (
           <TextInput key={i}
             ref={el => { refs.current[i] = el; }}
-            value={d} onChangeText={v => onChange(v, i)}
-            onKeyPress={({ nativeEvent: { key } }) => { if (key === 'Backspace' && !d && i > 0) refs.current[i-1]?.focus(); }}
+            value={d}
+            onChangeText={v => onChange(v, i)}
+            onKeyPress={({ nativeEvent: { key } }) => {
+              if (key === 'Backspace' && !d && i > 0) {
+                const next = [...code]; next[i-1] = ''; setCode(next);
+                refs.current[i-1]?.focus();
+              }
+            }}
             keyboardType="number-pad" maxLength={1} selectTextOnFocus
-            style={{ flex: 1, height: 56, borderRadius: 12, borderWidth: 1.5, borderColor: d ? C.primary : C.border, backgroundColor: d ? C.bg2 : C.white, fontSize: 22, fontWeight: '700', color: C.text, textAlign: 'center' }}
+            style={{
+              flex: 1, height: 60, borderRadius: 14,
+              borderWidth: 2,
+              borderColor: d ? C.primary : C.border,
+              backgroundColor: d ? C.bg2 : C.bg1,
+              fontSize: 24, fontWeight: '800', color: C.text0, textAlign: 'center',
+            }}
           />
         ))}
       </View>
-      <TouchableOpacity onPress={() => verify(code.join(''))} disabled={loading || code.some(d => !d)}
-        style={{ backgroundColor: (loading || code.some(d => !d)) ? '#C084E8' : C.primary, borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 16 }}>
-        <Text style={{ color: C.white, fontWeight: '700', fontSize: 16 }}>{loading ? 'Verifying...' : 'Verify'}</Text>
+
+      {/* Verify button */}
+      <TouchableOpacity
+        onPress={() => verify(code.join(''))}
+        disabled={loading || code.some(d => !d)}
+        style={{ backgroundColor: (loading || code.some(d => !d)) ? C.border : C.primary, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center', marginBottom: 20, shadowColor: C.primary, shadowOpacity: code.every(d => d) ? 0.35 : 0, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: code.every(d => d) ? 8 : 0 }}>
+        <Text style={{ color: C.white, fontWeight: '700', fontSize: 16 }}>
+          {loading ? 'Verifying...' : 'Verify Code'}
+        </Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={resend} disabled={timer > 0}>
-        <Text style={{ textAlign: 'center', color: timer > 0 ? C.text3 : C.primary, fontWeight: '600' }}>
-          {timer > 0 ? `Resend in ${timer}s` : 'Resend OTP'}
+
+      {/* Resend */}
+      <TouchableOpacity onPress={resend} disabled={timer > 0} style={{ alignItems: 'center' }}>
+        <Text style={{ fontSize: 14, color: timer > 0 ? C.text2 : C.primary, fontWeight: '600' }}>
+          {timer > 0 ? `Resend code in ${timer}s` : 'Resend OTP'}
         </Text>
       </TouchableOpacity>
     </View>

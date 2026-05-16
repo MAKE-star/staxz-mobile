@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { api } from '../../src/api';
 import { C } from '../../src/constants';
 
-export default function PhoneScreen() {
+export default function SignInScreen() {
   const router = useRouter();
   const [phone, setPhone] = useState('+234');
   const [loading, setLoading] = useState(false);
@@ -19,7 +19,7 @@ export default function PhoneScreen() {
     setLoading(true);
     try {
       await api('/auth/request-otp', { method: 'POST', body: { phone } });
-      router.push({ pathname: '/(auth)/otp', params: { phone } });
+      router.push({ pathname: '/(auth)/otp', params: { phone, mode: 'signin' } });
     } catch (e: any) {
       setError(e.message);
     } finally { setLoading(false); }
@@ -38,8 +38,9 @@ export default function PhoneScreen() {
           <Text style={{ fontSize: 13, color: C.text2, marginTop: 4 }}>Lagos's Beauty & Grooming Marketplace</Text>
         </View>
 
-        <Text style={{ fontSize: 22, fontWeight: '800', color: C.text0, marginBottom: 6 }}>Welcome back 👋</Text>
-        <Text style={{ fontSize: 15, color: C.text1, marginBottom: 28, lineHeight: 22 }}>Enter your phone number to continue.</Text>
+        {/* Title */}
+        <Text style={{ fontSize: 24, fontWeight: '800', color: C.text0, marginBottom: 6 }}>Sign In</Text>
+        <Text style={{ fontSize: 15, color: C.text1, marginBottom: 28, lineHeight: 22 }}>Enter your phone number to receive a one-time code.</Text>
 
         {/* Phone input */}
         <Text style={{ fontSize: 13, fontWeight: '600', color: C.text1, marginBottom: 8 }}>Phone Number</Text>
@@ -51,13 +52,22 @@ export default function PhoneScreen() {
         </View>
         {error ? <Text style={{ fontSize: 12, color: C.red, marginBottom: 16 }}>{error}</Text> : <View style={{ height: 16 }} />}
 
+        {/* Sign In button */}
         <TouchableOpacity onPress={submit} disabled={loading}
-          style={{ backgroundColor: C.primary, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center', shadowColor: C.primary, shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8 }}>
-          <Text style={{ color: C.white, fontWeight: '700', fontSize: 16 }}>{loading ? 'Sending OTP...' : 'Continue →'}</Text>
+          style={{ backgroundColor: C.primary, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center', shadowColor: C.primary, shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8, marginBottom: 24 }}>
+          <Text style={{ color: C.white, fontWeight: '700', fontSize: 16 }}>{loading ? 'Sending code...' : 'Continue →'}</Text>
         </TouchableOpacity>
 
-        <Text style={{ fontSize: 12, color: C.text2, textAlign: 'center', marginTop: 24, lineHeight: 18 }}>
-          By continuing you agree to our{'\n'}Terms of Service and Privacy Policy.
+        {/* Sign Up link */}
+        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 24 }}>
+          <Text style={{ fontSize: 14, color: C.text1 }}>Don't have an account? </Text>
+          <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: C.primary }}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={{ fontSize: 12, color: C.text2, textAlign: 'center', lineHeight: 18 }}>
+          By continuing you agree to our Terms of Service and Privacy Policy.
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
