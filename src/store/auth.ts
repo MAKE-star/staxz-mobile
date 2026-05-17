@@ -35,3 +35,16 @@ export const useAuth = create<AuthState>((set) => ({
     set({ isLoading: false });
   },
 }));
+
+// Hirer preferences store (local only, no DB needed)
+import { create as createStore } from 'zustand';
+
+interface PrefsState {
+  hirerState: string;
+  setHirerState: (s: string) => void;
+}
+
+export const usePrefs = createStore<PrefsState>((set) => ({
+  hirerState: 'Lagos', // default
+  setHirerState: (s) => set({ hirerState: s }),
+}));

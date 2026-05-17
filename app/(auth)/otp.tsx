@@ -29,7 +29,7 @@ export default function OtpScreen() {
   const verify = async (fullCode: string) => {
     setLoading(true);
     try {
-      const res = await api('/auth/verify-otp', { method: 'POST', body: { phone, code: fullCode } });
+      const res = await api('/auth/verify-otp', { method: 'POST', body: { phone, code: fullCode, role: role || 'hirer' } });
       await setAuth(res.data.accessToken, null);
 
       const isNew = res.data.isNewUser;

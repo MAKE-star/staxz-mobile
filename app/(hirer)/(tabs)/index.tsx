@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { View, Text, TextInput, FlatList, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '../../../src/store/auth';
+import { useAuth, usePrefs } from '../../../src/store/auth';
+import { STATES } from '../../../src/constants/locations';
+import { Modal, FlatList } from 'react-native';
 import { api } from '../../../src/api';
 import { C, CATS } from '../../../src/constants';
 
@@ -12,10 +14,12 @@ export default function ExploreScreen() {
   const [search, setSearch] = useState('');
   const [cat, setCat] = useState<string | null>(null);
   const [mode, setMode] = useState<string | null>(null);
+  const { hirerState, setHirerState } = usePrefs();
+  const [stateOpen, setStateOpen] = useState(false);
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['providers', cat, mode],
-    queryFn: () => api(`/providers${cat ? `?category=${cat}` : ''}${mode ? `${cat ? '&' : '?'}mode=${mode}` : ''}`, { token }),
+    queryKey: ['providers', cat, mode, hirerState],
+    queryFn: () => { const params = new URLSearchParams(); if (cat) params.set('category', cat); if (mode) params.set('mode', mode); if (hirerState) params.set('state', hirerState); return api(`/providers?${params.toString()}`, { token }); },
   });
 
   const providers = (data?.data ?? []).filter((p: any) =>
@@ -27,8 +31,18 @@ export default function ExploreScreen() {
     <View style={{ flex: 1, backgroundColor: C.bg0 }}>
       {/* Header */}
       <View style={{ backgroundColor: C.bg0, paddingHorizontal: 20, paddingTop: 56, paddingBottom: 16 }}>
-        <Text style={{ fontSize: 13, color: C.text2, marginBottom: 2 }}>Good day 👋</Text>
-        <Text style={{ fontSize: 22, fontWeight: '800', color: C.text0, marginBottom: 14 }}>Find your perfect stylist</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <View>
+            <Text style={{ fontSize: 13, color: C.text2, marginBottom: 2 }}>Good day 👋</Text>
+            <Text style={{ fontSize: 22, fontWeight: '800', color: C.text0 }}>Find your stylist</Text>
+          </View>
+          <TouchableOpacity onPress={() => setStateOpen(true)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.bg2, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 99, borderWidth: 1, borderColor: C.border }}>
+            <Text style={{ fontSize: 13 }}>📍</Text>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: C.primary }}>{hirerState}</Text>
+            <Text style={{ fontSize: 10, color: C.text2 }}>▼</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Search */}
         <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.bg1, borderRadius: 14, borderWidth: 1.5, borderColor: C.border, paddingHorizontal: 14, height: 48, marginBottom: 14 }}>
@@ -124,6 +138,24 @@ export default function ExploreScreen() {
             </TouchableOpacity>
           )} />
       )}
+    </View>
+
+      {/* State picker modal */}
+      <Modal visible={stateOpen} transparent animationType="slide" onRequestClose={() => setStateOpen(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }} onPress={() => setStateOpen(false)} />
+        <View style={{ backgroundColor: C.bg1, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '70%' }}>
+          <View style={{ width: 36, height: 4, backgroundColor: C.border, borderRadius: 2, alignSelf: 'center', marginBottom: 16 }} />
+          <Text style={{ fontSize: 18, fontWeight: '700', color: C.text0, marginBottom: 16 }}>Select Your State</Text>
+          <FlatList data={STATES} keyExtractor={s => s}
+            renderItem={({ item }) => (
+              <TouchableOpacity onPress={() => { setHirerState(item); setStateOpen(false); }}
+                style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderBottomWidth: 0.5, borderBottomColor: C.border, backgroundColor: item === hirerState ? C.bg2 : 'transparent' }}>
+                <Text style={{ fontSize: 15, color: item === hirerState ? C.primary : C.text0, fontWeight: item === hirerState ? '700' : '400' }}>{item}</Text>
+                {item === hirerState && <Text style={{ color: C.primary }}>✓</Text>}
+              </TouchableOpacity>
+            )} />
+        </View>
+      </Modal>
     </View>
   );
 }
