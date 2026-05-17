@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, Image } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, Image, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth, usePrefs } from '../../../src/store/auth';
 import { STATES } from '../../../src/constants/locations';
-import { Modal, FlatList } from 'react-native';
 import { api } from '../../../src/api';
 import { C, CATS } from '../../../src/constants';
 

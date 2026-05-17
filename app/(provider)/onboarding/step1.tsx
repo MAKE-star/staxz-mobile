@@ -1,7 +1,10 @@
-import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useOnboarding } from '../../../src/store/onboarding';
 import { Progress } from '../../../src/components/Progress';
+import { api } from '../../../src/api';
+import { useAuth } from '../../../src/store/auth';
 import { C } from '../../../src/constants';
 
 const LAGOS_AREAS = [
@@ -10,9 +13,15 @@ const LAGOS_AREAS = [
   'Magodo', 'Ojodu Berger', 'Ogba', 'Festac', 'Isolo',
 ];
 
+type CACStatus = 'idle' | 'checking' | 'verified' | 'failed';
+
 export default function Step1() {
   const router = useRouter();
   const { data, update } = useOnboarding();
+  const { token } = useAuth();
+  const [cacStatus, setCacStatus]           = useState<CACStatus>('idle');
+  const [cacError, setCacError]             = useState('');
+  const [cacRegisteredName, setCacRegisteredName] = useState('');
 
   const toggleMode = (id: string) => {
     const modes = data.service_modes.includes(id)
@@ -21,12 +30,35 @@ export default function Step1() {
     update({ service_modes: modes });
   };
 
-  const cacValid = /^(RC|BN|IT|LP|LLP)-?\d{5,9}$/i.test(data.cac_number.trim());
+  const cacFormatValid = /^(RC|BN|IT|LP|LLP)-?\d{5,9}$/i.test(data.cac_number.trim());
+
+  const verifyCac = async () => {
+    if (!cacFormatValid || !data.business_name.trim()) {
+      Alert.alert('Required', 'Enter your business name and CAC number first.');
+      return;
+    }
+    setCacStatus('checking');
+    setCacError('');
+    setCacRegisteredName('');
+    try {
+      const res = await api('/cac/verify', {
+        method: 'POST',
+        token,
+        body: { cac_number: data.cac_number.trim(), business_name: data.business_name.trim() },
+      });
+      setCacStatus('verified');
+      setCacRegisteredName(res.data?.registeredName ?? '');
+      update({ cac_verified: true } as any);
+    } catch (e: any) {
+      setCacStatus('failed');
+      setCacError(e.message ?? 'CAC verification failed');
+      update({ cac_verified: false } as any);
+    }
+  };
 
   const canContinue = data.business_name.trim().length >= 2
     && data.business_type !== ''
-    && cacValid
-    && data.location_text.trim().length >= 3
+    && cacStatus === 'verified'
     && data.service_modes.length > 0
     && data.base_fee !== '';
 
@@ -52,36 +84,56 @@ export default function Step1() {
 
           {/* Business Name */}
           <Text style={{ fontSize: 12, fontWeight: '700', color: C.text2, letterSpacing: 0.5, marginBottom: 6, textTransform: 'uppercase' }}>Business Name</Text>
-          <TextInput value={data.business_name} onChangeText={v => update({ business_name: v })}
+          <TextInput value={data.business_name}
+            onChangeText={v => { update({ business_name: v }); setCacStatus('idle'); setCacRegisteredName(''); }}
             placeholder="e.g. Supreme Cuts" maxLength={120}
             style={{ backgroundColor: C.bg1, borderRadius: 12, borderWidth: 1.5, borderColor: C.border, padding: 14, fontSize: 15, color: C.text0, marginBottom: 20 }} />
 
-          {/* CAC Number - mandatory */}
-          <Text style={{ fontSize: 12, fontWeight: '700', color: C.text2, letterSpacing: 0.5, marginBottom: 6, textTransform: 'uppercase' }}>CAC Registration Number</Text>
-          <TextInput value={data.cac_number} onChangeText={v => update({ cac_number: v })}
-            placeholder="RC-0000000" autoCapitalize="characters" maxLength={15}
-            style={{ backgroundColor: C.bg1, borderRadius: 12, borderWidth: 1.5, borderColor: data.cac_number && !cacValid ? C.red : data.cac_number && cacValid ? C.green : C.border, padding: 14, fontSize: 15, color: C.text0, marginBottom: 4 }} />
-          {data.cac_number && !cacValid && (
-            <Text style={{ fontSize: 12, color: C.red, marginBottom: 4 }}>Format: RC-1234567 or BN-9515166</Text>
-          )}
-          {data.cac_number && cacValid && (
-            <Text style={{ fontSize: 12, color: C.green, marginBottom: 4 }}>✓ Valid CAC format</Text>
-          )}
-          <Text style={{ fontSize: 12, color: C.text2, marginBottom: 20 }}>Verifies your legal accountability on the platform</Text>
-
-          {/* Location */}
-          <Text style={{ fontSize: 12, fontWeight: '700', color: C.text2, letterSpacing: 0.5, marginBottom: 6, textTransform: 'uppercase' }}>Location</Text>
-          <TextInput value={data.location_text} onChangeText={v => update({ location_text: v })}
-            placeholder="e.g. Yaba, Lekki Phase 1, Surulere..."
-            style={{ backgroundColor: C.bg1, borderRadius: 12, borderWidth: 1.5, borderColor: C.border, padding: 14, fontSize: 15, color: C.text0, marginBottom: 8 }} />
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
-            {LAGOS_AREAS.map(area => (
-              <TouchableOpacity key={area} onPress={() => update({ location_text: area })}
-                style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99, borderWidth: 1, borderColor: data.location_text === area ? C.primary : C.border, backgroundColor: data.location_text === area ? C.primary : C.bg1 }}>
-                <Text style={{ fontSize: 11, color: data.location_text === area ? C.white : C.text2 }}>{area}</Text>
-              </TouchableOpacity>
-            ))}
+          {/* CAC Number */}
+          <Text style={{ fontSize: 12, fontWeight: '700', color: C.text2, letterSpacing: 0.5, marginBottom: 6, textTransform: 'uppercase' }}>CAC Registration Number *</Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 6 }}>
+            <TextInput value={data.cac_number}
+              onChangeText={v => { update({ cac_number: v }); setCacStatus('idle'); setCacRegisteredName(''); }}
+              placeholder="RC-0000000 or BN-0000000" autoCapitalize="characters" maxLength={15}
+              style={{ flex: 1, backgroundColor: C.bg1, borderRadius: 12, borderWidth: 1.5,
+                borderColor: cacStatus === 'verified' ? C.green : cacStatus === 'failed' ? C.red : cacFormatValid ? C.primary : C.border,
+                padding: 14, fontSize: 15, color: C.text0 }} />
+            <TouchableOpacity onPress={verifyCac}
+              disabled={!cacFormatValid || !data.business_name.trim() || cacStatus === 'checking'}
+              style={{ backgroundColor: cacStatus === 'verified' ? C.green : (!cacFormatValid || !data.business_name.trim()) ? C.border : C.primary,
+                borderRadius: 12, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', minWidth: 80 }}>
+              {cacStatus === 'checking'
+                ? <ActivityIndicator color={C.white} size="small" />
+                : <Text style={{ color: C.white, fontWeight: '700', fontSize: 13 }}>
+                    {cacStatus === 'verified' ? '✓ Done' : 'Verify'}
+                  </Text>
+              }
+            </TouchableOpacity>
           </View>
+
+          {/* CAC status feedback */}
+          {cacStatus === 'verified' && (
+            <View style={{ backgroundColor: C.green + '15', borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: C.green + '40', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ fontSize: 18 }}>✅</Text>
+              <View>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: C.green }}>CAC Verified</Text>
+                {cacRegisteredName ? <Text style={{ fontSize: 12, color: C.text1 }}>Registered as: {cacRegisteredName}</Text> : null}
+              </View>
+            </View>
+          )}
+          {cacStatus === 'failed' && (
+            <View style={{ backgroundColor: C.redLo, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: C.red + '40' }}>
+              <Text style={{ fontSize: 13, color: C.red, fontWeight: '600' }}>❌ {cacError}</Text>
+              <Text style={{ fontSize: 11, color: C.text2, marginTop: 4 }}>
+                Contact support if your business is registered but verification fails.
+              </Text>
+            </View>
+          )}
+          {cacStatus === 'idle' && (
+            <Text style={{ fontSize: 12, color: C.text2, marginBottom: 20 }}>
+              Verifies your legal accountability on the platform. Required to go live.
+            </Text>
+          )}
 
           {/* Service Mode */}
           <Text style={{ fontSize: 12, fontWeight: '700', color: C.text2, letterSpacing: 0.5, marginBottom: 10, textTransform: 'uppercase' }}>Service Mode</Text>
@@ -107,10 +159,25 @@ export default function Step1() {
               placeholder="e.g. 5000" keyboardType="number-pad"
               style={{ flex: 1, fontSize: 15, color: C.text0 }} placeholderTextColor={C.text2} />
           </View>
-          <Text style={{ fontSize: 12, color: C.text2, marginBottom: 32 }}>Minimum starting price. You can quote higher per job.</Text>
+          <Text style={{ fontSize: 12, color: C.text2, marginBottom: 20 }}>Minimum starting price. You can quote higher per job.</Text>
+
+          {/* Bio (optional) */}
+          <Text style={{ fontSize: 12, fontWeight: '700', color: C.text2, letterSpacing: 0.5, marginBottom: 6, textTransform: 'uppercase' }}>Bio <Text style={{ fontWeight: '400', textTransform: 'none' }}>(optional)</Text></Text>
+          <TextInput value={data.bio} onChangeText={v => update({ bio: v })}
+            placeholder="Tell clients what makes you special..." multiline numberOfLines={3} maxLength={300}
+            style={{ backgroundColor: C.bg1, borderRadius: 12, borderWidth: 1.5, borderColor: C.border, padding: 14, fontSize: 15, color: C.text0, marginBottom: 4, minHeight: 80, textAlignVertical: 'top' }} />
+          <Text style={{ fontSize: 11, color: C.text2, marginBottom: 32 }}>{data.bio.length}/300</Text>
+
+          {/* Hint if CAC not verified */}
+          {cacStatus !== 'verified' && (
+            <View style={{ backgroundColor: C.amberLo, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: C.amber + '40' }}>
+              <Text style={{ fontSize: 13, color: C.amber, fontWeight: '600' }}>⚠️ Verify your CAC number to continue</Text>
+              <Text style={{ fontSize: 12, color: C.text1, marginTop: 4 }}>Enter your CAC number above and tap "Verify"</Text>
+            </View>
+          )}
 
           <TouchableOpacity onPress={() => router.push('/(provider)/onboarding/step2')} disabled={!canContinue}
-            style={{ backgroundColor: canContinue ? C.primary : C.border, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center', elevation: canContinue ? 8 : 0 }}>
+            style={{ backgroundColor: canContinue ? C.primary : C.border, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center', elevation: canContinue ? 8 : 0, shadowColor: C.primary, shadowOpacity: canContinue ? 0.35 : 0, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } }}>
             <Text style={{ color: C.white, fontWeight: '700', fontSize: 16 }}>Continue →</Text>
           </TouchableOpacity>
         </View>
