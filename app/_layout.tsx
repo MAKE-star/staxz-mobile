@@ -1,23 +1,20 @@
-import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
-import { C } from '../src/constants';
+import 'react-native-gesture-handler';
+import { useEffect } from 'react';
+import { Stack } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useAuth } from '../src/store/auth';
 
-const Icon = ({ emoji, focused }: { emoji: string; focused: boolean }) => (
-  <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>{emoji}</Text>
-);
+const qc = new QueryClient();
 
-export default function AdminTabs() {
+export default function Layout() {
+  const load = useAuth(s => s.load);
+  useEffect(() => { load(); }, []);
   return (
-    <Tabs screenOptions={{
-      headerShown: false,
-      tabBarActiveTintColor: C.primary,
-      tabBarInactiveTintColor: C.text2,
-      tabBarStyle: { backgroundColor: '#fff', borderTopColor: C.border, height: 80, paddingBottom: 16, paddingTop: 8 },
-      tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
-    }}>
-      <Tabs.Screen name="index"    options={{ title: 'Dashboard', tabBarIcon: ({ focused }) => <Icon emoji="📊" focused={focused} /> }} />
-      <Tabs.Screen name="disputes" options={{ title: 'Disputes',  tabBarIcon: ({ focused }) => <Icon emoji="⚠️" focused={focused} /> }} />
-      <Tabs.Screen name="users"    options={{ title: 'Users',     tabBarIcon: ({ focused }) => <Icon emoji="👥" focused={focused} /> }} />
-    </Tabs>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={qc}>
+        <Stack screenOptions={{ headerShown: false }} />
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }

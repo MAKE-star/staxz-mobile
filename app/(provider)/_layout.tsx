@@ -1,24 +1,13 @@
-import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
-import { C } from '../../src/constants';
-
-const Icon = ({ emoji, focused }: { emoji: string; focused: boolean }) => (
-  <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>{emoji}</Text>
-);
-
-export default function ProviderTabs() {
+import { Stack } from 'expo-router';
+export default function ProviderLayout() {
   return (
-    <Tabs screenOptions={{
-      headerShown: false,
-      tabBarActiveTintColor: C.primary,
-      tabBarInactiveTintColor: C.text2,
-      tabBarStyle: { backgroundColor: '#fff', borderTopColor: C.border, height: 80, paddingBottom: 16, paddingTop: 8 },
-      tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
-    }}>
-      <Tabs.Screen name="index"    options={{ title: 'Dashboard', tabBarIcon: ({ focused }) => <Icon emoji="📊" focused={focused} /> }} />
-      <Tabs.Screen name="bookings" options={{ title: 'Bookings',  tabBarIcon: ({ focused }) => <Icon emoji="📋" focused={focused} /> }} />
-      <Tabs.Screen name="earnings" options={{ title: 'Earnings',  tabBarIcon: ({ focused }) => <Icon emoji="💰" focused={focused} /> }} />
-      <Tabs.Screen name="profile"  options={{ title: 'Profile',   tabBarIcon: ({ focused }) => <Icon emoji="👤" focused={focused} /> }} />
-    </Tabs>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="onboarding/step1" />
+      <Stack.Screen name="onboarding/step2" />
+      <Stack.Screen name="onboarding/step3" />
+      <Stack.Screen name="onboarding/step4" />
+      <Stack.Screen name="onboarding/step5" />
+    </Stack>
   );
 }

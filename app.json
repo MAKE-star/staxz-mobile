@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "scheme": "staxz",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "owner": "make_d_great",
     "icon": "./assets/images/icon.png",
     "splash": {
@@ -19,31 +19,15 @@
       "adaptiveIcon": {
         "backgroundColor": "#7B4FA6",
         "foregroundImage": "./assets/images/adaptive-icon.png"
-      },
-      "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
-      ]
+      }
     },
     "ios": {
       "bundleIdentifier": "com.staxz.app",
-      "supportsTablet": false,
-      "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Staxz needs access to your photos so you can upload portfolio images.",
-        "NSCameraUsageDescription": "Staxz needs access to your camera so you can take photos for your portfolio."
-      }
+      "supportsTablet": false
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store",
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "Staxz needs access to your photos so you can upload portfolio images.",
-          "cameraPermission": "Staxz needs access to your camera so you can take photos for your portfolio."
-        }
-      ]
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
