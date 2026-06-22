@@ -31,13 +31,16 @@ export default function Step3() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
     });
 
-    if (result.canceled) return;
+    if (result.canceled || !result.assets || result.assets.length === 0) {
+      console.log('Image picker returned no usable asset', result);
+      return;
+    }
 
     const uri = result.assets[0].uri;
     const newCatPhotos = [...(photos[catId] ?? []), uri];
